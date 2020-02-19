@@ -17,7 +17,7 @@ namespace LCU.State.API.NapkinIDE.Infrastructure.Management
     public class InfrastructureManagementState
     {
         #region Constants
-        public const string HUB_NAME = "usermanagement";
+        public const string HUB_NAME = "infrastructuremanagement";
         #endregion
 
         #region Properties 
