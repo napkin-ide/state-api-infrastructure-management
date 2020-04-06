@@ -47,12 +47,12 @@ namespace LCU.State.API.NapkinIDE.Infrastructure.Management
             {
                 var hostsForRenewal = await ctx.CallActivityAsync<List<string>>("RetrieveHostsForRenewal", entApiKey);
 
-                var hostEnvRenewalRasks = hostsForRenewal.Select(host =>
+                var hostEnvRenewalTasks = hostsForRenewal.Select(host =>
                 {
                     return ctx.CallActivityAsync<List<RenewalEnvironment>>("RetrieveRenewalEnvironments", host);
                 });
 
-                var hostEnvRenewalGroups = await Task.WhenAll(hostEnvRenewalRasks);
+                var hostEnvRenewalGroups = await Task.WhenAll(hostEnvRenewalTasks);
 
                 var hostEnvRenewals = hostEnvRenewalGroups.SelectMany(grp => grp);
 
