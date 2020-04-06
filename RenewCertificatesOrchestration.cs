@@ -13,7 +13,7 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
 
-namespace LCU.State.API.NapkinIDE.Infrastructure.Management
+namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 {
     public class RenewalEnvironment
     {
@@ -24,10 +24,10 @@ namespace LCU.State.API.NapkinIDE.Infrastructure.Management
         public virtual string Host { get; set; }
     }
 
-    public static class RenewCertificates
+    public class RenewCertificatesOrchestration
     {
-        [FunctionName("RenewCertificates")]
-        public static async Task RunOrchestrator(
+        [FunctionName("RenewCertificatesOrchestration")]
+        public async Task RunOrchestrator(
             [OrchestrationTrigger] IDurableOrchestrationContext ctx)
         {
             string entApiKey;

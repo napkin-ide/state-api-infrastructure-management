@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Microsoft.Azure.WebJobs.Extensions.SignalRService;
 
-namespace LCU.State.API.NapkinIDE.Infrastructure.Management
+namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 {
     public static class Negotiate
     {

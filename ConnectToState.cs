@@ -12,7 +12,7 @@ using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using System.Security.Claims;
 using LCU.StateAPI;
 
-namespace LCU.State.API.NapkinIDE.Infrastructure.Management
+namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 {
     public static class ConnectToState
     {
