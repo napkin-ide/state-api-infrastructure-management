@@ -20,7 +20,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
     {
         #region API Methods
         [FunctionName("EnsureCertRenewalTimer")]
-        public virtual async Task RunTimer([TimerTrigger("* * * */1 * *", RunOnStartup = true)]TimerInfo myTimer,
+        public virtual async Task RunTimer([TimerTrigger("0 0 1 * * *", RunOnStartup = true)]TimerInfo myTimer,
             [DurableClient] IDurableOrchestrationClient starter, ILogger log)
         {
             log.LogInformation($"Ensuring Certificate Renewals via Timer: {DateTime.Now}");
@@ -42,7 +42,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
                     {
                         EnterpriseAPIKey = entApiKey
                     }.JSONConvert<MetadataModel>()
-                }, log, 5000);
+                }, log);
             }
             catch (Exception ex)
             {
@@ -57,7 +57,24 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         {
             log.LogInformation($"Ensuring Certificate Renewals via API");
 
-            return await starter.StartAction("RenewCertificatesOrchestration", req, log);
+            var entApiKey = Environment.GetEnvironmentVariable("LCU-ENTERPRISE-API-KEY");
+
+            var instanceId = await starter.StartAction2("RenewCertificatesOrchestration", new StateDetails()
+                {
+                    EnterpriseAPIKey = entApiKey,
+                    Host = "",
+                    HubName = "",
+                    StateKey = "",
+                    Username = ""
+                }, new ExecuteActionRequest()
+                {
+                    Arguments = new
+                    {
+                        EnterpriseAPIKey = entApiKey
+                    }.JSONConvert<MetadataModel>()
+                }, log);
+                
+			return starter.CreateCheckStatusResponse(req, instanceId);
         }
         #endregion
     }

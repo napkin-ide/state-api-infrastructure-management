@@ -43,44 +43,33 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
                 entApiKey = ctx.GetInput<string>();
             }
 
-            while (Status.Success)  //  TODO:  Maybe another way to break the loop
+            var hostsForRenewal = await ctx.CallActivityAsync<List<string>>("RetrieveHostsForRenewal", entApiKey);
+
+            var hostEnvRenewalTasks = hostsForRenewal.Select(host =>
             {
-                var hostsForRenewal = await ctx.CallActivityAsync<List<string>>("RetrieveHostsForRenewal", entApiKey);
+                return ctx.CallActivityAsync<List<RenewalEnvironment>>("RetrieveRenewalEnvironments", host);
+            });
 
-                var hostEnvRenewalTasks = hostsForRenewal.Select(host =>
+            var hostEnvRenewalGroups = await Task.WhenAll(hostEnvRenewalTasks);
+
+            var hostEnvRenewals = hostEnvRenewalGroups.SelectMany(grp => grp);
+
+            if (!hostEnvRenewals.IsNullOrEmpty())
+            {
+                var retryOptions = new RetryOptions(
+                    firstRetryInterval: TimeSpan.FromSeconds(5),
+                    maxNumberOfAttempts: 3);
+
+                var certGenerateStatus = await ctx.CallActivityWithRetryAsync<Status>("GenerateNewSSLCertificate", retryOptions,
+                    entApiKey);
+
+                if (certGenerateStatus)
                 {
-                    return ctx.CallActivityAsync<List<RenewalEnvironment>>("RetrieveRenewalEnvironments", host);
-                });
+                    var renewTasks = hostEnvRenewals.Select(her => ctx.CallActivityWithRetryAsync<Status>("RenewCertificatesForHostEnvironment",
+                        retryOptions, new Tuple<string, RenewalEnvironment>(entApiKey, her)));
 
-                var hostEnvRenewalGroups = await Task.WhenAll(hostEnvRenewalTasks);
-
-                var hostEnvRenewals = hostEnvRenewalGroups.SelectMany(grp => grp);
-
-                if (!hostEnvRenewals.IsNullOrEmpty())
-                {
-                    var retryOptions = new RetryOptions(
-                        firstRetryInterval: TimeSpan.FromSeconds(5),
-                        maxNumberOfAttempts: 3);
-
-                    var certGenerateStatus = await ctx.CallActivityWithRetryAsync<Status>("GenerateNewSSLCertificate", retryOptions,
-                        entApiKey);
-
-                    if (certGenerateStatus)
-                    {
-                        var renewTasks = hostEnvRenewals.Select(her => ctx.CallActivityWithRetryAsync<Status>("RenewCertificatesForHostEnvironment",
-                            retryOptions, new Tuple<string, RenewalEnvironment>(entApiKey,
-                            her)));
-
-                        var renewals = await Task.WhenAll(renewTasks);
-                    }
+                    var renewals = await Task.WhenAll(renewTasks);
                 }
-
-                // Wait for the next checkpoint
-                var nextCheckpoint = ctx.CurrentUtcDateTime.AddDays(1);
-
-                // log.LogInformation($"Next check for {input.Location} at {nextCheckpoint}.");
-
-                await ctx.CreateTimer(nextCheckpoint, CancellationToken.None);
             }
         }
 
