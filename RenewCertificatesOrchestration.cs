@@ -4,7 +4,10 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using DurableTask.Core.Exceptions;
 using Fathym;
+using Fathym.API;
+using LCU.Personas.Client.Enterprises;
 using LCU.Presentation.State.ReqRes;
 using LCU.StateAPI;
 using Microsoft.Azure.WebJobs;
@@ -24,10 +27,26 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         public virtual string Host { get; set; }
     }
 
-    public class RenewCertificatesOrchestration
+    public class RenewCertificatesOrchestration : ActionOrchestration
     {
+        #region Fields
+        protected EnterpriseArchitectClient entArch;
+
+        protected EnterpriseManagerClient entMgr;
+        #endregion
+
+        #region Constructors
+        public RenewCertificatesOrchestration(EnterpriseArchitectClient entArch, EnterpriseManagerClient entMgr)
+        {
+            this.entArch = entArch;
+
+            this.entMgr = entMgr;
+        }
+        #endregion
+
+        #region API Methods
         [FunctionName("RenewCertificatesOrchestration")]
-        public async Task RunOrchestrator(
+        public virtual async Task RunOrchestrator(
             [OrchestrationTrigger] IDurableOrchestrationContext ctx)
         {
             string entApiKey;
@@ -52,49 +71,63 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
             var hostEnvRenewalGroups = await Task.WhenAll(hostEnvRenewalTasks);
 
-            var hostEnvRenewals = hostEnvRenewalGroups.SelectMany(grp => grp);
+            var hostEnvRenewals = hostEnvRenewalGroups.Where(herg => !herg.IsNullOrEmpty()).ToDictionary(herg => herg.First().Host, herg => herg.ToList());
 
             if (!hostEnvRenewals.IsNullOrEmpty())
             {
                 var retryOptions = new RetryOptions(
-                    firstRetryInterval: TimeSpan.FromSeconds(5),
+                    firstRetryInterval: TimeSpan.FromSeconds(30),
                     maxNumberOfAttempts: 3);
 
-                var certGenerateStatus = await ctx.CallActivityWithRetryAsync<Status>("GenerateNewSSLCertificate", retryOptions,
-                    entApiKey);
-
-                if (certGenerateStatus)
+                var hostsSslCertTasks = hostEnvRenewals.Select(her =>
                 {
-                    var renewTasks = hostEnvRenewals.Select(her => ctx.CallActivityWithRetryAsync<Status>("RenewCertificatesForHostEnvironment",
-                        retryOptions, new Tuple<string, RenewalEnvironment>(entApiKey, her)));
+                    return ctx.CallActivityWithRetryAsync<Status>("GenerateNewSSLCertificate", retryOptions, her.Value.First());
+                });
+
+                var hostSslCertsStati = await Task.WhenAll(hostsSslCertTasks);
+
+                if (hostSslCertsStati.All(s => s))
+                {
+                    var renewTasks = hostEnvRenewals.SelectMany(herg =>
+                    {
+                        return herg.Value.Select(her =>
+                        {
+                            return ctx.CallActivityWithRetryAsync<Status>("RenewCertificatesForHostEnvironment", retryOptions, her);
+                        });
+                    });
 
                     var renewals = await Task.WhenAll(renewTasks);
+
+                    var success = renewals.All(s => s);
                 }
             }
         }
 
         [FunctionName("RetrieveHostsForRenewal")]
-        public static List<string> RetrieveHostsForRenewal([ActivityTrigger] string entApiKey, ILogger log)
+        public virtual async Task<List<string>> RetrieveHostsForRenewal([ActivityTrigger] string entApiKey, ILogger log)
         {
-            // log.LogInformation($"Saying hello to {name}.");
+            var regHosts = await entMgr.ListRegistrationHosts(entApiKey);
 
-            //  Call a Persona API to get a list of domains that are in need of renewal... The persona api will use the graph
-            //      - EnterpriseRegistration (assume always one) - Lookup by entApiKey and return list of enterprise hosts (g.V().HasLabel('EnterpriseRegistration').Has('EnterpriseAPIKey', entApiKey).Properties('Hosts').Value())
-            //      - Take list of hosts and lookup all enterprises that leverage a *.{entHost} host 
-            //              - Run g.V().HasLabel('Enterprise').Properties('Hosts').Value() and pull out all of them that end with any host returned from EnterpriseRegistration
+            if (regHosts.Status)
+            {
+                var renewalHostTasks = regHosts.Model.Select(regHost =>
+                {
+                    return entMgr.FindRegistratedHosts(entApiKey, regHost);
+                    // return entMgr.Get<BaseResponse<List<string>>>($"hosting/{entApiKey}/find-hosts/{regHost}");
+                });
 
-            // entArch = req.ResolveClient<EnterpriseArchitectClient>(logger);
+                var renewalHostResults = await Task.WhenAll(renewalHostTasks);
 
-            return new List<string>() {
-                "www.fathym-it.com",
-                "mike-prd-test1.fathym-it.com",
-                "mike-prd-test2.fathym-it.com",
-                "____.fathym-it.com"
-            };
+                var renewalHosts = renewalHostResults.SelectMany(rhr => rhr.Model ?? new List<string>()).ToList();
+
+                return renewalHosts;
+            }
+            else
+                return new List<string>();
         }
 
         [FunctionName("RetrieveRenewalEnvironments")]
-        public static List<RenewalEnvironment> RetrieveRenewalEnvironments([ActivityTrigger] string host, ILogger log)
+        public virtual async Task<List<RenewalEnvironment>> RetrieveRenewalEnvironments([ActivityTrigger] string host, ILogger log)
         {
             // log.LogInformation($"Saying hello to {name}.");
 
@@ -102,8 +135,6 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
             //  Call a Persona API to retrieve any enterprise envirnments actually using the host... The persona api will use the graph to retrieve data, and Azure API to verify
             //      - For each host, lookup enterpriseApiKey, and then get list of environments for that API key
-            //              - var entCtxt = await entMgr.ResolveHost(host);
-            //              - var envs = await entMgr.ListEnvironments(entCtxt.EntApiKey);
             //      - New Persona API endpoint to validate Azure Hosting is live;  call for each returned env
             //              - entMgr.HasValidHostedApp(entApiKey, envLookup)
             //                  
@@ -123,11 +154,15 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
             //                      Host = host
             //                  }));
 
+            var entCtxt = await entMgr.ResolveHost(host, false);
+
+            // var envs = await entMgr.ListEnvironments(entCtxt.EntApiKey);
+
             return renewalEnvs;
         }
 
         [FunctionName("GenerateNewSSLCertificate")]
-        public static Status GenerateNewSSLCertificate([ActivityTrigger] string entApiKey, ILogger log)
+        public virtual Status GenerateNewSSLCertificate([ActivityTrigger] RenewalEnvironment renewalEnv, ILogger log)
         {
             // log.LogInformation($"Saying hello to {name}.");
 
@@ -142,13 +177,9 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         }
 
         [FunctionName("RenewCertificatesForHostEnvironment")]
-        public static Status RenewCertificatesForHostEnvironment([ActivityTrigger] Tuple<string, RenewalEnvironment> renewalEnvCfg, ILogger log)
+        public virtual Status RenewCertificatesForHostEnvironment([ActivityTrigger] RenewalEnvironment renewalEnv, ILogger log)
         {
             // log.LogInformation($"Saying hello to {name}.");
-
-            var entApiKey = renewalEnvCfg.Item1;
-
-            var renewalEnv = renewalEnvCfg.Item2;
 
             //  Call a Persona API to deploy cert... Call
             //      - entArch > Hosting Controller > EnsureHostsSSL
@@ -161,5 +192,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
             return Status.Success;
         }
+        #endregion
+
     }
 }

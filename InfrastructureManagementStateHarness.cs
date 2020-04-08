@@ -41,6 +41,10 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         #endregion
 
         #region API Methods
+        public virtual void SetFathymDashboardURL(string url)
+        {
+            State.FathymDashboardURL = url;
+        }
         #endregion
     }
 }

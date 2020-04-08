@@ -23,7 +23,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         public const string HUB_NAME = "infrastructuremanagement";
         #endregion
         
-        // [DataMember]
-        // public virtual string InstanceID { get; set; }
+        [DataMember]
+        public virtual string FathymDashboardURL { get; set; }
     }
 }

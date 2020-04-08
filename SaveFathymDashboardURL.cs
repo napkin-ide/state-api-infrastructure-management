@@ -23,24 +23,27 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 {
     [Serializable]
     [DataContract]
-    public class RefreshRequest : BaseRequest
-    { }
-
-    public class Refresh
+    public class SaveFathymDashboardURLRequest : BaseRequest
     {
-        [FunctionName("Refresh")]
+        [DataMember]
+        public virtual string URL { get; set; }
+    }
+
+    public class SaveFathymDashboardURL
+    {
+        [FunctionName("SaveFathymDashboardURL")]
         public virtual async Task<Status> Run([HttpTrigger] HttpRequest req, ILogger log,
             [SignalR(HubName = InfrastructureManagementState.HUB_NAME)]IAsyncCollector<SignalRMessage> signalRMessages,
             [Blob("state-api/{headers.lcu-ent-api-key}/{headers.lcu-hub-name}/{headers.x-ms-client-principal-id}/{headers.lcu-state-key}", FileAccess.ReadWrite)] CloudBlockBlob stateBlob)
         {
-            return await stateBlob.WithStateHarness<InfrastructureManagementState, RefreshRequest, InfrastructureManagementStateHarness>(req, signalRMessages, log,
-                async (harness, refreshReq, actReq) =>
+            return await stateBlob.WithStateHarness<InfrastructureManagementState, SaveFathymDashboardURLRequest, InfrastructureManagementStateHarness>(req, signalRMessages, log,
+                async (harness, dataReq, actReq) =>
             {
-                log.LogInformation($"Refresh");
+                log.LogInformation($"Executing SaveFathymDashboardURL");
 
                 var stateDetails = StateUtils.LoadStateDetails(req);
 
-                //  TODO:  Make sure FatDashURL up to date with backend
+                harness.SetFathymDashboardURL(dataReq.URL);
 
                 return Status.Success;
             });
