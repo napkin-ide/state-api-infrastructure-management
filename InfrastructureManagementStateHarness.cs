@@ -23,11 +23,16 @@ using LCU.Personas.Enterprises;
 using LCU.Personas.Client.Applications;
 using LCU.Personas.Client.Identity;
 using Fathym.API;
+using LCU.Personas.Client.Security;
 
 namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 {
     public class InfrastructureManagementStateHarness : LCUStateHarness<InfrastructureManagementState>
     {
+        #region Constants
+        public const string FATHYM_DASHBOARD_URL_LOOKUP = "LCU.Fathym-Dashboard-URL";
+        #endregion
+
         #region Fields 
         #endregion
 
@@ -41,9 +46,22 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         #endregion
 
         #region API Methods
-        public virtual void SetFathymDashboardURL(string url)
+        public virtual async Task GetFathymDashboardURL(SecurityManagerClient secMgr, string entApiKey)
+        {
+            var tpdResp = await secMgr.RetrieveEnterpriseThirdPartyData(entApiKey, FATHYM_DASHBOARD_URL_LOOKUP);
+
+            if (tpdResp.Status)
+                State.FathymDashboardURL = tpdResp.Model[FATHYM_DASHBOARD_URL_LOOKUP];
+        }
+
+        public virtual async Task SetFathymDashboardURL(SecurityManagerClient secMgr, string entApiKey, string url)
         {
             State.FathymDashboardURL = url;
+
+            await secMgr.SetEnterpriseThirdPartyData(entApiKey, new Dictionary<string, string>()
+            {
+                { FATHYM_DASHBOARD_URL_LOOKUP, url }
+            });
         }
         #endregion
     }

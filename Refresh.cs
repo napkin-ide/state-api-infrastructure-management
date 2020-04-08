@@ -18,6 +18,7 @@ using LCU.Personas.Client.Applications;
 using LCU.StateAPI.Utilities;
 using System.Security.Claims;
 using LCU.Personas.Client.Enterprises;
+using LCU.Personas.Client.Security;
 
 namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 {
@@ -28,6 +29,17 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
     public class Refresh
     {
+        #region Fields
+        protected SecurityManagerClient secMgr;
+        #endregion
+
+        #region Constructors
+        public Refresh(SecurityManagerClient secMgr)
+        {
+            this.secMgr = secMgr;
+        }
+        #endregion
+
         [FunctionName("Refresh")]
         public virtual async Task<Status> Run([HttpTrigger] HttpRequest req, ILogger log,
             [SignalR(HubName = InfrastructureManagementState.HUB_NAME)]IAsyncCollector<SignalRMessage> signalRMessages,
@@ -40,7 +52,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
                 var stateDetails = StateUtils.LoadStateDetails(req);
 
-                //  TODO:  Make sure FatDashURL up to date with backend
+                await harness.GetFathymDashboardURL(secMgr, stateDetails.EnterpriseAPIKey);
 
                 return Status.Success;
             });

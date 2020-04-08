@@ -18,6 +18,7 @@ using LCU.Personas.Client.Applications;
 using LCU.StateAPI.Utilities;
 using System.Security.Claims;
 using LCU.Personas.Client.Enterprises;
+using LCU.Personas.Client.Security;
 
 namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 {
@@ -31,6 +32,17 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
     public class SaveFathymDashboardURL
     {
+        #region Fields
+        protected SecurityManagerClient secMgr;
+        #endregion
+
+        #region Constructors
+        public SaveFathymDashboardURL(SecurityManagerClient secMgr)
+        {
+            this.secMgr = secMgr;
+        }
+        #endregion
+
         [FunctionName("SaveFathymDashboardURL")]
         public virtual async Task<Status> Run([HttpTrigger] HttpRequest req, ILogger log,
             [SignalR(HubName = InfrastructureManagementState.HUB_NAME)]IAsyncCollector<SignalRMessage> signalRMessages,
@@ -43,7 +55,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
                 var stateDetails = StateUtils.LoadStateDetails(req);
 
-                harness.SetFathymDashboardURL(dataReq.URL);
+                await harness.SetFathymDashboardURL(secMgr, stateDetails.EnterpriseAPIKey, dataReq.URL);
 
                 return Status.Success;
             });
