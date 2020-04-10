@@ -112,7 +112,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
             {
                 var renewalHostTasks = regHosts.Model.Select(regHost =>
                 {
-                    return entMgr.FindRegistratedHosts(entApiKey, regHost);
+                    return entMgr.FindRegisteredHosts(entApiKey, regHost);
                     // return entMgr.Get<BaseResponse<List<string>>>($"hosting/{entApiKey}/find-hosts/{regHost}");
                 });
 

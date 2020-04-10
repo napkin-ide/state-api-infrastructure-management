@@ -5,7 +5,7 @@
     <RootNamespace>state_api_infrastructure_management</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="LCU.StateAPI" Version="1.187.20098.2" />
+    <PackageReference Include="LCU.StateAPI" Version="1.199.20101.13" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.1" />
   </ItemGroup>
   <ItemGroup>
