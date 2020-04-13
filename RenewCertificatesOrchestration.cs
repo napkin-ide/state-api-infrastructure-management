@@ -133,30 +133,20 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
             var renewalEnvs = new List<RenewalEnvironment>();
 
-            //  Call a Persona API to retrieve any enterprise envirnments actually using the host... The persona api will use the graph to retrieve data, and Azure API to verify
-            //      - For each host, lookup enterpriseApiKey, and then get list of environments for that API key
-            //      - New Persona API endpoint to validate Azure Hosting is live;  call for each returned env
-            //              - entMgr.HasValidHostedApp(entApiKey, envLookup)
-            //                  
-            //                  var infraCfg = await getAzureInfraConfig(prvGraph, entCtxt.EntApiKey, envLookup);
+            var entResp = await entMgr.ResolveHost(host, false);
 
-            //                  var creds = getAzureAuthorization(infraCfg);
+            if (entResp.Status)
+            {
+                var renewEnvResp = await entMgr.RetrieveRenewalEnvironments(host);
 
-            //                  var azure = getAzureHook(creds, infraCfg.AzureSubID);
-
-            //                  var webApp = azure.AppServices.WebApps.GetByResourceGroup(envLookup, envLookup);
-
-            //                  var enabledEnvs = envs.Where(env => webApp.EnabledHostNames.Contains(env)).ToList();
-
-            //                  renewalEnvs.AddRange(enabledEnvs.Select(env => new RenewalEnvironment() {
-            //                      EnterpriseAPIKey = entCtxt.EntApiKey,
-            //                      EnvironmentLookup = envLookup,
-            //                      Host = host
-            //                  }));
-
-            var entCtxt = await entMgr.ResolveHost(host, false);
-
-            // var envs = await entMgr.ListEnvironments(entCtxt.EntApiKey);
+                if (renewEnvResp.Status)
+                    renewalEnvs.AddRange(renewEnvResp.Model.Select(env => new RenewalEnvironment()
+                    {
+                        EnterpriseAPIKey = entResp.Model.PrimaryAPIKey,
+                        EnvironmentLookup = env.Lookup,
+                        Host = host
+                    }));
+            }
 
             return renewalEnvs;
         }
