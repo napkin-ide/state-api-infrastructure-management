@@ -46,7 +46,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
             }
         }
 
-        [FunctionName("EnsureCertRenewal")]
+        [FunctionName("RenewCertificates")]
         public virtual async Task<IActionResult> RunAPI([HttpTrigger]HttpRequest req, [DurableClient] IDurableOrchestrationClient starter, ILogger log)
         {
             log.LogInformation($"Ensuring Certificate Renewals via API");
