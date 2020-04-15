@@ -19,12 +19,29 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
     public class EnsureCertRenewal
     {
         #region API Methods
-        // [FunctionName("EnsureCertRenewalTimer")]
+        [FunctionName("RenewCertificatesTimer")]
         public virtual async Task RunTimer([TimerTrigger("0 0 1 * * *", RunOnStartup = true)]TimerInfo myTimer,
             [DurableClient] IDurableOrchestrationClient starter, ILogger log)
         {
             log.LogInformation($"Ensuring Certificate Renewals via Timer: {DateTime.Now}");
 
+            var instanceId = await runAction(starter, log);
+        }
+
+        [FunctionName("RenewCertificates")]
+        public virtual async Task<IActionResult> RunAPI([HttpTrigger]HttpRequest req, [DurableClient] IDurableOrchestrationClient starter, ILogger log)
+        {
+            log.LogInformation($"Ensuring Certificate Renewals via API");
+
+            var instanceId = await runAction(starter, log);
+
+            return starter.CreateCheckStatusResponse(req, instanceId);
+        }
+        #endregion
+
+        #region Helpers
+        public virtual async Task<string> runAction(IDurableOrchestrationClient starter, ILogger log)
+        {
             var entApiKey = Environment.GetEnvironmentVariable("LCU-ENTERPRISE-API-KEY");
 
             try
@@ -39,32 +56,13 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
                         EnterpriseAPIKey = entApiKey
                     }.JSONConvert<MetadataModel>()
                 }, log);
+
+                return instanceId;
             }
             catch (Exception ex)
             {
-
+                return null;
             }
-        }
-
-        [FunctionName("RenewCertificates")]
-        public virtual async Task<IActionResult> RunAPI([HttpTrigger]HttpRequest req, [DurableClient] IDurableOrchestrationClient starter, ILogger log)
-        {
-            log.LogInformation($"Ensuring Certificate Renewals via API");
-
-            var entApiKey = Environment.GetEnvironmentVariable("LCU-ENTERPRISE-API-KEY");
-
-            var instanceId = await starter.StartAction("RenewCertificatesOrchestration", new StateDetails()
-            {
-                EnterpriseAPIKey = entApiKey
-            }, new ExecuteActionRequest()
-            {
-                Arguments = new
-                {
-                    EnterpriseAPIKey = entApiKey
-                }.JSONConvert<MetadataModel>()
-            }, log);
-
-            return starter.CreateCheckStatusResponse(req, instanceId);
         }
         #endregion
     }
