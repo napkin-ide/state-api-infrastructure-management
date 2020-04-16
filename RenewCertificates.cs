@@ -61,7 +61,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
     public class RenewCertificatesTimer : GenericRenewCertificates
     {
         #region API Methods
-        [FunctionName("RenewCertificatesTimer")]
+        // [FunctionName("RenewCertificatesTimer")]
         public virtual async Task RunTimer([TimerTrigger("0 0 1 * * *", RunOnStartup = true)]TimerInfo myTimer,
             [DurableClient] IDurableOrchestrationClient starter, ILogger log)
         {
