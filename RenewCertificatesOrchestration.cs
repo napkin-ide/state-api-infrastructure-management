@@ -8,6 +8,7 @@ using DurableTask.Core.Exceptions;
 using Fathym;
 using Fathym.API;
 using LCU.Personas.Client.Enterprises;
+using LCU.Personas.Enterprises;
 using LCU.Presentation.State.ReqRes;
 using LCU.StateAPI;
 using Microsoft.Azure.WebJobs;
@@ -81,7 +82,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
                 var hostsSslCertTasks = hostEnvRenewals.Select(her =>
                 {
-                    return ctx.CallActivityWithRetryAsync<Status>("GenerateNewSSLCertificate", retryOptions, her.Value.First());
+                    return ctx.CallActivityWithRetryAsync<Status>("EnsureSSLCertificate", retryOptions, her.Value.First());
                 });
 
                 var hostSslCertsStati = await Task.WhenAll(hostsSslCertTasks);
@@ -92,7 +93,10 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
                     {
                         return herg.Value.Select(her =>
                         {
-                            return ctx.CallActivityWithRetryAsync<Status>("RenewCertificatesForHostEnvironment", retryOptions, her);
+                            return ctx.CallActivityWithRetryAsync<Status>("RenewCertificatesForHostEnvironment", retryOptions, new Dictionary<string, RenewalEnvironment>()
+                            {
+                                { entApiKey, her }
+                            });
                         });
                     });
 
@@ -106,6 +110,8 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         [FunctionName("RetrieveHostsForRenewal")]
         public virtual async Task<List<string>> RetrieveHostsForRenewal([ActivityTrigger] string entApiKey, ILogger log)
         {
+            log.LogInformation($"RetrieveHostsForRenewal executing for enterprise: {entApiKey}");
+
             var regHosts = await entMgr.ListRegistrationHosts(entApiKey);
 
             if (regHosts.Status)
@@ -113,7 +119,6 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
                 var renewalHostTasks = regHosts.Model.Select(regHost =>
                 {
                     return entMgr.FindRegisteredHosts(entApiKey, regHost);
-                    // return entMgr.Get<BaseResponse<List<string>>>($"hosting/{entApiKey}/find-hosts/{regHost}");
                 });
 
                 var renewalHostResults = await Task.WhenAll(renewalHostTasks);
@@ -129,7 +134,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         [FunctionName("RetrieveRenewalEnvironments")]
         public virtual async Task<List<RenewalEnvironment>> RetrieveRenewalEnvironments([ActivityTrigger] string host, ILogger log)
         {
-            // log.LogInformation($"Saying hello to {name}.");
+            log.LogInformation($"RetrieveRenewalEnvironments executing for: {host}");
 
             var renewalEnvs = new List<RenewalEnvironment>();
 
@@ -151,36 +156,40 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
             return renewalEnvs;
         }
 
-        [FunctionName("GenerateNewSSLCertificate")]
-        public virtual Status GenerateNewSSLCertificate([ActivityTrigger] RenewalEnvironment renewalEnv, ILogger log)
+        [FunctionName("EnsureSSLCertificate")]
+        public virtual async Task<Status> EnsureSSLCertificate([ActivityTrigger] RenewalEnvironment renewalEnv, ILogger log)
         {
-            // log.LogInformation($"Saying hello to {name}.");
+            log.LogInformation($"EnsureSSLCertificate executing for: {renewalEnv.ToJSON()}");
 
-            //  Call a Persona API
-            //      - Kevin has all of this logic in the console app, i don't think yet ported into persona APIs (check with Kevin)
-            //          - The persona API should not return the cert, just continue storing in the blob
-            //      - Create a * cert for all hosts in the return from g.V().HasLabel('EnterpriseRegistration').Has('EnterpriseAPIKey', entApiKey).Properties('Hosts').Value()
+            var ensureCerts = await entArch.EnsureCertificates(new EnsureCertificatesRequest()
+            {
+                Host = renewalEnv.Host
+            }, renewalEnv.EnterpriseAPIKey, renewalEnv.EnvironmentLookup);
 
-            // entArch = req.ResolveClient<EnterpriseArchitectClient>(logger);
-
-            return Status.Success;
+            return ensureCerts.Status;
         }
 
         [FunctionName("RenewCertificatesForHostEnvironment")]
-        public virtual Status RenewCertificatesForHostEnvironment([ActivityTrigger] RenewalEnvironment renewalEnv, ILogger log)
+        public virtual async Task<Status> RenewCertificatesForHostEnvironment([ActivityTrigger] Dictionary<string, RenewalEnvironment> renewalEnvs, ILogger log)
         {
-            // log.LogInformation($"Saying hello to {name}.");
+            log.LogInformation($"RenewCertificatesForHostEnvironment executing for: {renewalEnvs.ToJSON()}");
 
-            //  Call a Persona API to deploy cert... Call
-            //      - entArch > Hosting Controller > EnsureHostsSSL
-            //      - 
+            var status = Status.Initialized;
 
-            // entArch = req.ResolveClient<EnterpriseArchitectClient>(logger);
+            await renewalEnvs.Each(async renewalEnv =>
+            {
+                var ensureCerts = await entArch.EnsureHostsSSL(new EnsureHostsSSLRequest()
+                {
+                    Hosts = new List<string>() { renewalEnv.Value.Host }
+                }, renewalEnv.Value.EnterpriseAPIKey, renewalEnv.Value.EnvironmentLookup, parentEntApiKey: renewalEnv.Key);
 
-            //  entArch.EnsureHostsSSL(new EnsureHostsSSLRequest(){ Hosts = new List<string>() { renewalEnv.Host }}, renewalEnv.EnterpriseAPIKey,
-            //      renewalEnv.EnvironmentLookup, parentEntApiKey: entApikEy);
+                status = ensureCerts.Status;
 
-            return Status.Success;
+                return !status;
+            });
+
+
+            return status;
         }
         #endregion
 

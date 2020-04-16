@@ -25,7 +25,7 @@ using LCU.Personas.Client.Identity;
 using Fathym.API;
 using LCU.Personas.Client.Security;
 
-namespace LCU.State.API.NapkinIDE.InfrastructureManagement
+namespace LCU.State.API.NapkinIDE.InfrastructureManagement.State
 {
     public class InfrastructureManagementStateHarness : LCUStateHarness<InfrastructureManagementState>
     {

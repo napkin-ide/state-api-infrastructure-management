@@ -13,7 +13,7 @@ using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using LCU.Presentation.State.ReqRes;
 using System.Runtime.Serialization;
 
-namespace LCU.State.API.NapkinIDE.InfrastructureManagement
+namespace LCU.State.API.NapkinIDE.InfrastructureManagement.State
 {
     [Serializable]
     [DataContract]

@@ -19,6 +19,7 @@ using LCU.StateAPI.Utilities;
 using System.Security.Claims;
 using LCU.Personas.Client.Enterprises;
 using LCU.Personas.Client.Security;
+using LCU.State.API.NapkinIDE.InfrastructureManagement.State;
 
 namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 {

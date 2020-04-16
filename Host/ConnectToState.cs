@@ -11,8 +11,9 @@ using Microsoft.Azure.WebJobs.Extensions.SignalRService;
 using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using System.Security.Claims;
 using LCU.StateAPI;
+using LCU.State.API.NapkinIDE.InfrastructureManagement.State;
 
-namespace LCU.State.API.NapkinIDE.InfrastructureManagement
+namespace LCU.State.API.NapkinIDE.InfrastructureManagement.Host
 {
     public static class ConnectToState
     {
