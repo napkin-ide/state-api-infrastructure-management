@@ -14,6 +14,7 @@ using Microsoft.Azure.WebJobs.Extensions.SignalRService;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Blob;
+using System.Linq;
 
 namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 {
@@ -26,16 +27,40 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
             try
             {
-                var instances = await starter.ListInstancesAsync(new OrchestrationStatusQueryCondition()
+                var listInstanceQuery = new OrchestrationStatusQueryCondition()
                 {
                     PageSize = 1000,
-                    RuntimeStatus = new[] { OrchestrationRuntimeStatus.Running }
-                }, new System.Threading.CancellationToken());
+                    RuntimeStatus = new[] { OrchestrationRuntimeStatus.Running, OrchestrationRuntimeStatus.Pending }
+                };
 
-                await instances.DurableOrchestrationState.Each(async instance =>
+                var instances = await starter.ListInstancesAsync(listInstanceQuery, new System.Threading.CancellationToken());
+
+                var running = new HashSet<string>(instances.DurableOrchestrationState.Select(instance => instance.InstanceId));
+
+                var terminateTasks = running.Select(instanceId =>
                 {
-                    await starter.TerminateAsync(instance.InstanceId, "Cleanup");
+                    return starter.TerminateAsync(instanceId, "Cleanup");
                 });
+
+                await Task.WhenAll(terminateTasks);
+
+                while (running.Count > 0)
+                {
+                    var results = await Task.WhenAll(instances.DurableOrchestrationState.Select(instance => starter.GetStatusAsync(instance.InstanceId)));
+
+                    foreach (var status in results)
+                    {
+                        // Remove any terminated or completed instances from the hashset
+                        if (status != null &&
+                            status.RuntimeStatus != OrchestrationRuntimeStatus.Pending &&
+                            status.RuntimeStatus != OrchestrationRuntimeStatus.Running)
+                        {
+                            running.Remove(status.InstanceId);
+                        }
+                    }
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(1000));
+                }
 
                 var instanceId = await starter.StartAction("RenewCertificatesOrchestration", new StateDetails()
                 {
@@ -61,7 +86,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
     public class RenewCertificatesTimer : GenericRenewCertificates
     {
         #region API Methods
-        // [FunctionName("RenewCertificatesTimer")]
+        [FunctionName("RenewCertificatesTimer")]
         public virtual async Task RunTimer([TimerTrigger("0 0 1 * * *", RunOnStartup = true)]TimerInfo myTimer,
             [DurableClient] IDurableOrchestrationClient starter, ILogger log)
         {
