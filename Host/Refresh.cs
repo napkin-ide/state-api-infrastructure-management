@@ -21,7 +21,7 @@ using LCU.Personas.Client.Enterprises;
 using LCU.Personas.Client.Security;
 using LCU.State.API.NapkinIDE.InfrastructureManagement.State;
 
-namespace LCU.State.API.NapkinIDE.InfrastructureManagement
+namespace LCU.State.API.NapkinIDE.InfrastructureManagement.Host
 {
     [Serializable]
     [DataContract]
