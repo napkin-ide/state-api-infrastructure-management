@@ -161,15 +161,15 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         {
             log.LogInformation($"EnsureSSLCertificate executing for: {renewalEnv.ToJSON()}");
 
-            // var ensureCerts = await entArch.EnsureCertificates(new EnsureCertificatesRequest()
-            // {
-            //     Host = renewalEnv.Host
-            // }, renewalEnv.EnterpriseAPIKey, renewalEnv.EnvironmentLookup);
-
-            var ensureCerts = await entArch.Post<EnsureCertificatesRequest, BaseResponse>($"hosting/{renewalEnv.EnterpriseAPIKey}/ensure/certs/{renewalEnv.EnvironmentLookup}?parentEntApiKey={renewalEnv.EnterpriseAPIKey}", new EnsureCertificatesRequest()
+            var ensureCerts = await entArch.EnsureCertificates(new EnsureCertificatesRequest()
             {
                 Host = renewalEnv.Host
-            });
+            }, renewalEnv.EnterpriseAPIKey, renewalEnv.EnvironmentLookup);
+
+            // var ensureCerts = await entArch.Post<EnsureCertificatesRequest, BaseResponse>($"hosting/{renewalEnv.EnterpriseAPIKey}/ensure/certs/{renewalEnv.EnvironmentLookup}?parentEntApiKey={renewalEnv.EnterpriseAPIKey}", new EnsureCertificatesRequest()
+            // {
+            //     Host = renewalEnv.Host
+            // });
 
             return ensureCerts.Status;
         }
