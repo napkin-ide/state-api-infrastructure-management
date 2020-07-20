@@ -166,6 +166,11 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
                 Host = renewalEnv.Host
             }, renewalEnv.EnterpriseAPIKey, renewalEnv.EnvironmentLookup);
 
+            // var ensureCerts = await entArch.Post<EnsureCertificatesRequest, BaseResponse>($"hosting/{renewalEnv.EnterpriseAPIKey}/ensure/certs/{renewalEnv.EnvironmentLookup}?parentEntApiKey={renewalEnv.EnterpriseAPIKey}", new EnsureCertificatesRequest()
+            // {
+            //     Host = renewalEnv.Host
+            // });
+
             return ensureCerts.Status;
         }
 
