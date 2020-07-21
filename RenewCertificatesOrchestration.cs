@@ -82,7 +82,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
                 var hostsSslCertTasks = hostEnvRenewals.Select(her =>
                 {
-                    return ctx.CallActivityWithRetryAsync<Status>("EnsureSSLCertificate", retryOptions, her.Value.First());
+                    return ctx.CallActivityWithRetryAsync<Status>("EnsureSSLCertificate", retryOptions, new Tuple<string, RenewalEnvironment>(entApiKey, her.Value.First()));
                 });
 
                 var hostSslCertsStati = await Task.WhenAll(hostsSslCertTasks);
@@ -157,14 +157,14 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         }
 
         [FunctionName("EnsureSSLCertificate")]
-        public virtual async Task<Status> EnsureSSLCertificate([ActivityTrigger] RenewalEnvironment renewalEnv, ILogger log)
+        public virtual async Task<Status> EnsureSSLCertificate([ActivityTrigger] Tuple<string, RenewalEnvironment> renewalEnv, ILogger log)
         {
             log.LogInformation($"EnsureSSLCertificate executing for: {renewalEnv.ToJSON()}");
 
             var ensureCerts = await entArch.EnsureCertificates(new EnsureCertificatesRequest()
             {
-                Host = renewalEnv.Host
-            }, renewalEnv.EnterpriseAPIKey, renewalEnv.EnvironmentLookup);
+                Host = renewalEnv.Item2.Host
+            }, renewalEnv.Item2.EnterpriseAPIKey, renewalEnv.Item2.EnvironmentLookup, parentEntApiKey:renewalEnv.Item1);
 
             // var ensureCerts = await entArch.Post<EnsureCertificatesRequest, BaseResponse>($"hosting/{renewalEnv.EnterpriseAPIKey}/ensure/certs/{renewalEnv.EnvironmentLookup}?parentEntApiKey={renewalEnv.EnterpriseAPIKey}", new EnsureCertificatesRequest()
             // {
