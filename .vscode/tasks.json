@@ -98,11 +98,6 @@
       "type": "shell",      
       "group": "test",    
       "problemMatcher": []
-    },
-    {
-      "label": "cd",
-      "command": "cd '${workspaceFolder}/${workspaceFolderBasename}'",
-      "type": "shell"
-    }  
+    }
   ]
 }
