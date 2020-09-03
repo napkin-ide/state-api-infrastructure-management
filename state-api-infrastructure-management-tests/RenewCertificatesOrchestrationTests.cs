@@ -22,7 +22,7 @@ namespace state_api_infrastructure_management_tests
         [TestMethod]
         public async Task TestRenewCertificatesOrchestration()
         {
-            LcuEntApiKey = "";            
+            LcuentLookup = "";            
             PrincipalId = "";
 
             addRequestHeaders();
@@ -44,7 +44,7 @@ namespace state_api_infrastructure_management_tests
         [TestMethod]
         public async Task TestRetrieveHostsForRenewal()
         {
-            LcuEntApiKey = "";            
+            LcuentLookup = "";            
             PrincipalId = "";
 
             addRequestHeaders();
@@ -65,7 +65,7 @@ namespace state_api_infrastructure_management_tests
         [TestMethod]
         public async Task TestRetrieveRenewalEnvironments()
         {
-            LcuEntApiKey = "";            
+            LcuentLookup = "";            
             PrincipalId = "";
 
             addRequestHeaders();
@@ -86,7 +86,7 @@ namespace state_api_infrastructure_management_tests
         [TestMethod]
         public async Task TestEnsureSSLCertificate()
         {
-            LcuEntApiKey = "";            
+            LcuentLookup = "";            
             PrincipalId = "";
 
             addRequestHeaders();

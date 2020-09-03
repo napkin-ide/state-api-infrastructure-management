@@ -22,7 +22,7 @@ namespace state_api_infrastructure_management_tests
         [TestMethod]
         public async Task TestRenewCertificates()
         {
-            LcuEntApiKey = "";            
+            LcuentLookup = "";            
             PrincipalId = "";
 
             addRequestHeaders();
@@ -44,7 +44,7 @@ namespace state_api_infrastructure_management_tests
         [TestMethod]
         public async Task TestRenewCertificatesTimer()
         {
-            LcuEntApiKey = "";            
+            LcuentLookup = "";            
             PrincipalId = "";
 
             addRequestHeaders();

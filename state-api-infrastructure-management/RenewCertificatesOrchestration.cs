@@ -23,7 +23,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
     {
         public virtual string EnvironmentLookup { get; set; }
 
-        public virtual string EnterpriseAPIKey { get; set; }
+        public virtual string EnterpriseLookup { get; set; }
 
         public virtual string Host { get; set; }
     }
@@ -50,20 +50,20 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         public virtual async Task RunOrchestrator(
             [OrchestrationTrigger] IDurableOrchestrationContext ctx)
         {
-            string entApiKey;
+            string entLookup;
 
             try
             {
                 var actionArgs = ctx.GetInput<ExecuteActionArguments>();
 
-                entApiKey = actionArgs.StateDetails.EnterpriseAPIKey;
+                entLookup = actionArgs.StateDetails.EnterpriseLookup;
             }
             catch
             {
-                entApiKey = ctx.GetInput<string>();
+                entLookup = ctx.GetInput<string>();
             }
 
-            var hostsForRenewal = await ctx.CallActivityAsync<List<string>>("RetrieveHostsForRenewal", entApiKey);
+            var hostsForRenewal = await ctx.CallActivityAsync<List<string>>("RetrieveHostsForRenewal", entLookup);
 
             var hostEnvRenewalTasks = hostsForRenewal.Select(host =>
             {
@@ -82,7 +82,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
                 var hostsSslCertTasks = hostEnvRenewals.Select(her =>
                 {
-                    return ctx.CallActivityWithRetryAsync<Status>("EnsureSSLCertificate", retryOptions, new Tuple<string, RenewalEnvironment>(entApiKey, her.Value.First()));
+                    return ctx.CallActivityWithRetryAsync<Status>("EnsureSSLCertificate", retryOptions, new Tuple<string, RenewalEnvironment>(entLookup, her.Value.First()));
                 });
 
                 var hostSslCertsStati = await Task.WhenAll(hostsSslCertTasks);
@@ -95,7 +95,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
                         {
                             return ctx.CallActivityWithRetryAsync<Status>("RenewCertificatesForHostEnvironment", retryOptions, new Dictionary<string, RenewalEnvironment>()
                             {
-                                { entApiKey, her }
+                                { entLookup, her }
                             });
                         });
                     });
@@ -108,17 +108,17 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         }
 
         [FunctionName("RetrieveHostsForRenewal")]
-        public virtual async Task<List<string>> RetrieveHostsForRenewal([ActivityTrigger] string entApiKey, ILogger log)
+        public virtual async Task<List<string>> RetrieveHostsForRenewal([ActivityTrigger] string entLookup, ILogger log)
         {
-            log.LogInformation($"RetrieveHostsForRenewal executing for enterprise: {entApiKey}");
+            log.LogInformation($"RetrieveHostsForRenewal executing for enterprise: {entLookup}");
 
-            var regHosts = await entMgr.ListRegistrationHosts(entApiKey);
+            var regHosts = await entMgr.ListRegistrationHosts(entLookup);
 
             if (regHosts.Status)
             {
                 var renewalHostTasks = regHosts.Model.Select(regHost =>
                 {
-                    return entMgr.FindRegisteredHosts(entApiKey, regHost);
+                    return entMgr.FindRegisteredHosts(entLookup, regHost);
                 });
 
                 var renewalHostResults = await Task.WhenAll(renewalHostTasks);
@@ -147,7 +147,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
                 if (renewEnvResp.Status)
                     renewalEnvs.AddRange(renewEnvResp.Model.Select(env => new RenewalEnvironment()
                     {
-                        EnterpriseAPIKey = entResp.Model.PrimaryAPIKey,
+                        EnterpriseLookup = entResp.Model.EnterpriseLookup,
                         EnvironmentLookup = env.Lookup,
                         Host = host
                     }));
@@ -164,9 +164,9 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
             var ensureCerts = await entArch.EnsureCertificates(new EnsureCertificatesRequest()
             {
                 Host = renewalEnv.Item2.Host
-            }, renewalEnv.Item2.EnterpriseAPIKey, renewalEnv.Item2.EnvironmentLookup, parentEntApiKey:renewalEnv.Item1);
+            }, renewalEnv.Item2.EnterpriseLookup, renewalEnv.Item2.EnvironmentLookup, parententLookup:renewalEnv.Item1);
 
-            // var ensureCerts = await entArch.Post<EnsureCertificatesRequest, BaseResponse>($"hosting/{renewalEnv.EnterpriseAPIKey}/ensure/certs/{renewalEnv.EnvironmentLookup}?parentEntApiKey={renewalEnv.EnterpriseAPIKey}", new EnsureCertificatesRequest()
+            // var ensureCerts = await entArch.Post<EnsureCertificatesRequest, BaseResponse>($"hosting/{renewalEnv.EnterpriseLookup}/ensure/certs/{renewalEnv.EnvironmentLookup}?parententLookup={renewalEnv.EnterpriseLookup}", new EnsureCertificatesRequest()
             // {
             //     Host = renewalEnv.Host
             // });
@@ -186,7 +186,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
                 var ensureCerts = await entArch.EnsureHostsSSL(new EnsureHostsSSLRequest()
                 {
                     Hosts = new List<string>() { renewalEnv.Value.Host }
-                }, renewalEnv.Value.EnterpriseAPIKey, renewalEnv.Value.EnvironmentLookup, parentEntApiKey: renewalEnv.Key);
+                }, renewalEnv.Value.EnterpriseLookup, renewalEnv.Value.EnvironmentLookup, parententLookup: renewalEnv.Key);
 
                 status = ensureCerts.Status;
 

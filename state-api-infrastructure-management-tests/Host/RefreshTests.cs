@@ -22,7 +22,7 @@ namespace state_api_infrastructure_management_tests
         [TestMethod]
         public async Task TestRefresh()
         {
-            LcuEntApiKey = "";            
+            LcuentLookup = "";            
             PrincipalId = "";
 
             addRequestHeaders();

@@ -46,19 +46,19 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement.State
         #endregion
 
         #region API Methods
-        public virtual async Task GetFathymDashboardURL(SecurityManagerClient secMgr, string entApiKey)
+        public virtual async Task GetFathymDashboardURL(SecurityManagerClient secMgr, string entLookup)
         {
-            var tpdResp = await secMgr.RetrieveEnterpriseThirdPartyData(entApiKey, FATHYM_DASHBOARD_URL_LOOKUP);
+            var tpdResp = await secMgr.RetrieveEnterpriseThirdPartyData(entLookup, FATHYM_DASHBOARD_URL_LOOKUP);
 
             if (tpdResp.Status)
                 State.FathymDashboardURL = tpdResp.Model[FATHYM_DASHBOARD_URL_LOOKUP];
         }
 
-        public virtual async Task SetFathymDashboardURL(SecurityManagerClient secMgr, string entApiKey, string url)
+        public virtual async Task SetFathymDashboardURL(SecurityManagerClient secMgr, string entLookup, string url)
         {
             State.FathymDashboardURL = url;
 
-            await secMgr.SetEnterpriseThirdPartyData(entApiKey, new Dictionary<string, string>()
+            await secMgr.SetEnterpriseThirdPartyData(entLookup, new Dictionary<string, string>()
             {
                 { FATHYM_DASHBOARD_URL_LOOKUP, url }
             });

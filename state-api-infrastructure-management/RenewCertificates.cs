@@ -13,7 +13,7 @@ using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using Microsoft.Azure.WebJobs.Extensions.SignalRService;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
 using System.Linq;
 
 namespace LCU.State.API.NapkinIDE.InfrastructureManagement
@@ -23,7 +23,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         #region Helpers
         public virtual async Task<string> runAction(IDurableOrchestrationClient starter, ILogger log)
         {
-            var entApiKey = Environment.GetEnvironmentVariable("LCU-ENTERPRISE-API-KEY");
+            var entLookup = Environment.GetEnvironmentVariable("LCU-ENTERPRISE-LOOKUP");
 
             try
             {
@@ -64,12 +64,12 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
                 var instanceId = await starter.StartAction("RenewCertificatesOrchestration", new StateDetails()
                 {
-                    EnterpriseAPIKey = entApiKey
+                    EnterpriseLookup = entLookup
                 }, new ExecuteActionRequest()
                 {
                     Arguments = new
                     {
-                        EnterpriseAPIKey = entApiKey
+                        EnterpriseLookup = entLookup
                     }.JSONConvert<MetadataModel>()
                 }, log);
 
