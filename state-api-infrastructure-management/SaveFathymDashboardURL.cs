@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Microsoft.Azure.WebJobs.Extensions.SignalRService;
 using Fathym;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
 using System.Runtime.Serialization;
 using Fathym.API;
 using System.Collections.Generic;
@@ -47,7 +47,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
         [FunctionName("SaveFathymDashboardURL")]
         public virtual async Task<Status> Run([HttpTrigger] HttpRequest req, ILogger log,
             [SignalR(HubName = InfrastructureManagementState.HUB_NAME)]IAsyncCollector<SignalRMessage> signalRMessages,
-            [Blob("state-api/{headers.lcu-ent-api-key}/{headers.lcu-hub-name}/{headers.x-ms-client-principal-id}/{headers.lcu-state-key}", FileAccess.ReadWrite)] CloudBlockBlob stateBlob)
+            [Blob("state-api/{headers.lcu-ent-lookup}/{headers.lcu-hub-name}/{headers.x-ms-client-principal-id}/{headers.lcu-state-key}", FileAccess.ReadWrite)] CloudBlockBlob stateBlob)
         {
             return await stateBlob.WithStateHarness<InfrastructureManagementState, SaveFathymDashboardURLRequest, InfrastructureManagementStateHarness>(req, signalRMessages, log,
                 async (harness, dataReq, actReq) =>
@@ -56,7 +56,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement
 
                 var stateDetails = StateUtils.LoadStateDetails(req);
 
-                await harness.SetFathymDashboardURL(secMgr, stateDetails.EnterpriseAPIKey, dataReq.URL);
+                await harness.SetFathymDashboardURL(secMgr, stateDetails.EnterpriseLookup, dataReq.URL);
 
                 return Status.Success;
             });

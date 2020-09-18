@@ -12,7 +12,7 @@ using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using System.Security.Claims;
 using LCU.StateAPI;
 using LCU.State.API.NapkinIDE.InfrastructureManagement.State;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
 
 namespace LCU.State.API.NapkinIDE.InfrastructureManagement.Host
 {
@@ -23,7 +23,7 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement.Host
             ClaimsPrincipal claimsPrincipal, //[LCUStateDetails]StateDetails stateDetails,
             [SignalR(HubName = InfrastructureManagementState.HUB_NAME)]IAsyncCollector<SignalRMessage> signalRMessages,
             [SignalR(HubName = InfrastructureManagementState.HUB_NAME)]IAsyncCollector<SignalRGroupAction> signalRGroupActions,
-            [Blob("state-api/{headers.lcu-ent-api-key}/{headers.lcu-hub-name}/{headers.x-ms-client-principal-id}/{headers.lcu-state-key}", FileAccess.ReadWrite)] CloudBlockBlob stateBlob)
+            [Blob("state-api/{headers.lcu-ent-lookup}/{headers.lcu-hub-name}/{headers.x-ms-client-principal-id}/{headers.lcu-state-key}", FileAccess.ReadWrite)] CloudBlockBlob stateBlob)
         {
             return await signalRMessages.ConnectToState<InfrastructureManagementState>(req, log, claimsPrincipal, stateBlob, signalRGroupActions);
         }
