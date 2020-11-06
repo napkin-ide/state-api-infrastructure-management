@@ -40,8 +40,8 @@ namespace LCU.State.API.NapkinIDE.InfrastructureManagement.State
         #endregion
 
         #region Constructors
-        public InfrastructureManagementStateHarness(InfrastructureManagementState state)
-            : base(state ?? new InfrastructureManagementState())
+        public InfrastructureManagementStateHarness(InfrastructureManagementState state, ILogger log)
+            : base(state ?? new InfrastructureManagementState(), log)
         { }
         #endregion
 
